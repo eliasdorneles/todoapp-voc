@@ -1,6 +1,8 @@
 TodoApp
 =======
 
+**NOTE:** this is under development, not functionaly yet
+
 A simple To-Do list app
 
 ## How to run in development
@@ -15,5 +17,4 @@ Install the Python development requirements:
 
 Build and run the app:
 
-    python setup.py android
-    (cd android && ./gradlew run)
+    python setup.py android --start
