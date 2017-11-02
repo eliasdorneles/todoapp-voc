@@ -1,7 +1,9 @@
 import android
 from android.graphics import Paint
 from android.view import ViewGroup
+from android.content import ContentValues
 from android.widget import CheckBox, LinearLayout, ListView, TextView
+from android.database.sqlite import SQLiteDatabase
 
 
 class OnClick(implements=android.view.View[OnClickListener]):
@@ -83,19 +85,79 @@ class ListAdapter(extends=android.widget.BaseAdapter):
         return todo.getView()
 
 
+class TodoDB(extends=android.database.sqlite.SQLiteOpenHelper):
+    @super({
+        context: android.content.Context,
+        "org.pybee.elias.todoapp": java.lang.String,
+        None: android.database.sqlite.SQLiteDatabase[CursorFactory],
+        1: int
+    })
+    def __init__(self, context):
+        pass
+
+    def onCreate(self, db: android.database.sqlite.SQLiteDatabase) -> void:
+        print('initiating TodoDB')
+        db.execSQL(
+            "CREATE TABLE todo ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+            "title TEXT NOT NULL,"
+            "finished BOOLEAN NOT NULL CHECK (finished IN (0,1))"
+            ")"
+        )
+
+    def onUpgrade(self, db: android.database.sqlite.SQLiteDatabase,
+                  oldVersion: int, newVersion: int) -> void:
+        print('will upgrade database from', oldVersion, ' to', newVersion)
+        raise NotImplementedError
+
+    def add_item(self, item, finished=False):
+        values = ContentValues()
+        values.put("title", item)
+        values.put("finished", finished)
+        db = self.getWritableDatabase()
+        db.insertWithOnConflict("todo", None, values, SQLiteDatabase.CONFLICT_REPLACE)
+        db.close()
+
+    def fetch_items(self):
+        result = {}
+
+        db = self.getReadableDatabase()
+        cursor = db.rawQuery("SELECT * FROM todo", None)
+        while cursor.moveToNext():
+            item_id = int(cursor.getInt(cursor.getColumnIndex('id')))
+            title = cursor.getString(cursor.getColumnIndex('title'))
+            finished = cursor.getInt(cursor.getColumnIndex('finished'))
+            result[item_id] = dict(title=title, finished=bool(finished))
+        db.close()
+
+        return result
+
+
 class MainApp:
     def __init__(self):
         self._activity = android.PythonActivity.setListener(self)
+        self.db = TodoDB(self._activity)
+
+    def _populate_db(self):
+        self.db.add_item("get ice cream", finished=True)
+        self.db.add_item("call mom", finished=False)
+        self.db.add_item("buy plane tickets", finished=False)
+        self.db.add_item("reserve hotel", finished=False)
 
     def onCreate(self):
         print('Starting TodoApp')
-        # TODO: sync this with a sqlite database
-        items = [
-            "get ice cream",
-            "call mom",
-            "buy plane tickets",
-            "reserve hotel",
-        ]
+        dbitems = self.db.fetch_items()
+
+        if not dbitems:
+            print('populating DB')
+            self._populate_db()
+            dbitems = self.db.fetch_items()
+
+        print('dbitems', dbitems)
+
+        # TODO: wire up the "finished" field from database to the UI
+        items = [x[1]['title'] for x in dbitems.items()]
+
         adapter = ListAdapter(self._activity, items)
         listView = ListView(self._activity)
         listView.setAdapter(adapter)
