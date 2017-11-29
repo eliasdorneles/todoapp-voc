@@ -18,3 +18,6 @@ Install the Python development requirements:
 Build and run the app:
 
     python setup.py android --start
+
+
+![Todo screenshot](screenshot.png)
