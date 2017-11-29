@@ -37,8 +37,10 @@ class StrikeableTextView(extends=android.widget.TextView):
 
 
 class TodoItem:
-    def __init__(self, value, context, layout=None):
+    def __init__(self, value, context, layout=None, callback=None):
+        self.callback = callback
         self.context = context
+        self.value = value
         if layout:
             self.layout = layout
             self.checkbox = layout.getChildAt(0)
@@ -55,16 +57,19 @@ class TodoItem:
         self.checkbox.setChecked(value['finished'])
 
     def update(self):
-        self.text_view.setStriked(self.checkbox.isChecked())
+        self.value['finished'] = self.checkbox.isChecked()
+        self.text_view.setStriked(self.value['finished'])
+        self.callback(self.value)
 
     def getView(self):
         return self.layout
 
 
 class ListAdapter(extends=android.widget.BaseAdapter):
-    def __init__(self, context, dbitems):
+    def __init__(self, context, values, listener=None):
+        self.listener = listener
         self.context = context
-        self.values = list(dbitems.items())
+        self.values = list(values)
 
     def getCount(self) -> int:
         return len(self.values)
@@ -73,16 +78,16 @@ class ListAdapter(extends=android.widget.BaseAdapter):
         return self.values[position]
 
     def getItemId(self, position: int) -> long:
-        return hash(self.values[position])
+        return self.values[position]['id']
 
     def getView(self, position: int,
                 view: android.view.View,
                 container: android.view.ViewGroup) -> android.view.View:
-        key, value = self.getItem(position)
+        value = self.getItem(position)
         if view is None:
-            todo = TodoItem(value, self.context)
+            todo = TodoItem(value, self.context, callback=self.listener)
         else:
-            todo = TodoItem(value, self.context, layout=view)
+            todo = TodoItem(value, self.context, layout=view, callback=self.listener)
         return todo.getView()
 
 
@@ -120,7 +125,7 @@ class TodoDB(extends=android.database.sqlite.SQLiteOpenHelper):
         db.close()
 
     def fetch_items(self):
-        result = {}
+        result = []
 
         db = self.getReadableDatabase()
         cursor = db.rawQuery("SELECT * FROM todo", None)
@@ -128,11 +133,17 @@ class TodoDB(extends=android.database.sqlite.SQLiteOpenHelper):
             item_id = int(cursor.getInt(cursor.getColumnIndex('id')))
             title = cursor.getString(cursor.getColumnIndex('title'))
             finished = cursor.getInt(cursor.getColumnIndex('finished'))
-            result[item_id] = dict(title=title, finished=bool(finished))
+            result.append(dict(id=item_id, title=title, finished=bool(finished)))
         db.close()
 
         return result
 
+    def update_item(self, value):
+        db = self.getWritableDatabase()
+        db.execSQL(
+            "UPDATE todo SET finished=%d WHERE id=%d"%(int(value['finished']), value['id'])
+        )
+        db.close()
 
 class MainApp:
     def __init__(self):
@@ -156,7 +167,7 @@ class MainApp:
 
         print('dbitems', dbitems)
 
-        adapter = ListAdapter(self._activity, dbitems)
+        adapter = ListAdapter(self._activity, dbitems, listener=self.update_item)
         listView = ListView(self._activity)
         listView.setAdapter(adapter)
 
@@ -166,6 +177,8 @@ class MainApp:
 
         self._activity.setContentView(vlayout)
 
+    def update_item(self, value):
+        self.db.update_item(value)
 
 def main():
     MainApp()
