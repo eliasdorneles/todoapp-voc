@@ -37,7 +37,7 @@ class StrikeableTextView(extends=android.widget.TextView):
 
 
 class TodoItem:
-    def __init__(self, text, context, striked=False, layout=None):
+    def __init__(self, value, context, layout=None):
         self.context = context
         if layout:
             self.layout = layout
@@ -48,10 +48,11 @@ class TodoItem:
             self.checkbox = CheckBox(self.context)
             self.checkbox.setOnClickListener(OnClick(self.update))
             self.layout.addView(self.checkbox)
-            self.text_view = StrikeableTextView(self.context, striked=False)
+            self.text_view = StrikeableTextView(self.context, striked=value['finished'])
             self.text_view.setTextSize(25)
             self.layout.addView(self.text_view)
-        self.text_view.setText(text)
+        self.text_view.setText(value['title'])
+        self.checkbox.setChecked(value['finished'])
 
     def update(self):
         self.text_view.setStriked(self.checkbox.isChecked())
@@ -61,9 +62,9 @@ class TodoItem:
 
 
 class ListAdapter(extends=android.widget.BaseAdapter):
-    def __init__(self, context, values):
+    def __init__(self, context, dbitems):
         self.context = context
-        self.values = list(values)
+        self.values = list(dbitems.items())
 
     def getCount(self) -> int:
         return len(self.values)
@@ -77,11 +78,11 @@ class ListAdapter(extends=android.widget.BaseAdapter):
     def getView(self, position: int,
                 view: android.view.View,
                 container: android.view.ViewGroup) -> android.view.View:
-        text = self.getItem(position)
+        key, value = self.getItem(position)
         if view is None:
-            todo = TodoItem(text, self.context, striked=position % 2 == 0)
+            todo = TodoItem(value, self.context)
         else:
-            todo = TodoItem(text, self.context, layout=view)
+            todo = TodoItem(value, self.context, layout=view)
         return todo.getView()
 
 
@@ -155,10 +156,7 @@ class MainApp:
 
         print('dbitems', dbitems)
 
-        # TODO: wire up the "finished" field from database to the UI
-        items = [x[1]['title'] for x in dbitems.items()]
-
-        adapter = ListAdapter(self._activity, items)
+        adapter = ListAdapter(self._activity, dbitems)
         listView = ListView(self._activity)
         listView.setAdapter(adapter)
 
