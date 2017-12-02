@@ -2,7 +2,8 @@ import android
 from android.graphics import Paint
 from android.view import ViewGroup
 from android.content import ContentValues
-from android.widget import CheckBox, LinearLayout, ListView, TextView
+from android.widget import Button, CheckBox, EditText, LinearLayout, RelativeLayout, ListView, TextView
+from android.text import InputFilter
 from android.database.sqlite import SQLiteDatabase
 
 
@@ -167,18 +168,52 @@ class MainApp:
 
         print('dbitems', dbitems)
 
-        adapter = ListAdapter(self._activity, dbitems, listener=self.update_item)
-        listView = ListView(self._activity)
-        listView.setAdapter(adapter)
+        self.adapter = ListAdapter(self._activity, dbitems, listener=self.update_item)
+        self.listView = ListView(self._activity)
+        self.listView.setAdapter(self.adapter)
 
         vlayout = LinearLayout(self._activity)
         vlayout.setOrientation(LinearLayout.VERTICAL)
-        vlayout.addView(listView)
+        vlayout.addView(self.listView)
+
+        hlayout = LinearLayout(self._activity)
+        hlayout.setOrientation(LinearLayout.HORIZONTAL)
+        
+        relative = RelativeLayout(self._activity) # relative inside vertical layout
+        params = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
+        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+
+        self.entry_text = EditText(self._activity)
+        self.entry_text.setText('a')
+        #filters = [InputFilter.LengthFilter(25)] #define filters to entry_text
+        #self.entry_text.setFilters(filters) #define max length of edit text
+        hlayout.addView(self.entry_text)
+
+        relative2 = RelativeLayout(self._activity) # relative inside horizontal layout
+        params2 = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
+        params2.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
+
+        button_create = Button(self._activity)
+        button_create.setText('Create')
+        button_create.setOnClickListener(OnClick(self.create_item))
+        relative2.addView(button_create, params2) # add button_create to relative layout 2 with params 2
+
+        hlayout.addView(relative2) # add relative layout 2 with create button inside a horizontal layout
+
+        relative.addView(hlayout, params) # add horizontal layout to relative with params
+
+        vlayout.addView(relative, vlayout.LayoutParams.WRAP_CONTENT, vlayout.LayoutParams.WRAP_CONTENT)
 
         self._activity.setContentView(vlayout)
 
     def update_item(self, value):
         self.db.update_item(value)
+
+    def change_entry(self):
+        pass
+
+    def create_item(self):
+        pass
 
 def main():
     MainApp()
