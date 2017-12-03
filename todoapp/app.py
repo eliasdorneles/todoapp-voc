@@ -2,8 +2,7 @@ import android
 from android.graphics import Paint
 from android.view import ViewGroup
 from android.content import ContentValues
-from android.widget import Button, CheckBox, EditText, LinearLayout, RelativeLayout, ListView, TextView
-from android.text import InputFilter
+from android.widget import Button, CheckBox, EditText, LinearLayout, RelativeLayout, ListView, TextView, LayoutParams
 from android.database.sqlite import SQLiteDatabase
 
 
@@ -159,38 +158,15 @@ class MainApp:
 
     def onCreate(self):
         print('Starting TodoApp')
-        dbitems = self.db.fetch_items()
-
-        if not dbitems:
-            print('populating DB')
-            self._populate_db()
-            dbitems = self.db.fetch_items()
-
-        print('dbitems', dbitems)
-
-        self.adapter = ListAdapter(self._activity, dbitems, listener=self.update_item)
-        self.listView = ListView(self._activity)
-        self.listView.setAdapter(self.adapter)
-
-        vlayout = LinearLayout(self._activity)
-        vlayout.setOrientation(LinearLayout.VERTICAL)
-        vlayout.addView(self.listView)
-
         hlayout = LinearLayout(self._activity)
         hlayout.setOrientation(LinearLayout.HORIZONTAL)
-        
-        relative = RelativeLayout(self._activity) # relative inside vertical layout
-        params = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
-        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
 
         self.entry_text = EditText(self._activity)
-        self.entry_text.setText('a')
-        #filters = [InputFilter.LengthFilter(25)] #define filters to entry_text
-        #self.entry_text.setFilters(filters) #define max length of edit text
+        self.entry_text.setText('Write your new todo item')
         hlayout.addView(self.entry_text)
 
         relative2 = RelativeLayout(self._activity) # relative inside horizontal layout
-        params2 = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
+        params2 = RelativeLayout.LayoutParams(hlayout.LayoutParams.WRAP_CONTENT, hlayout.LayoutParams.WRAP_CONTENT)
         params2.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
 
         button_create = Button(self._activity)
@@ -200,20 +176,45 @@ class MainApp:
 
         hlayout.addView(relative2) # add relative layout 2 with create button inside a horizontal layout
 
-        relative.addView(hlayout, params) # add horizontal layout to relative with params
+        vlayout = LinearLayout(self._activity)
+        vlayout.setOrientation(LinearLayout.VERTICAL)
+        vlayout.addView(hlayout)
 
-        vlayout.addView(relative, vlayout.LayoutParams.WRAP_CONTENT, vlayout.LayoutParams.WRAP_CONTENT)
+        print('Starting TodoApp List')
+        self.dbitems = self.db.fetch_items()
+
+        if not self.dbitems:
+            print('populating DB')
+            self._populate_db()
+            self.dbitems = self.db.fetch_items()
+
+        print('dbitems', self.dbitems)
+
+        self.adapter = ListAdapter(self._activity, self.dbitems, listener=self.update_item)
+        self.listView = ListView(self._activity)
+        self.listView.setAdapter(self.adapter)
+
+        #relative = RelativeLayout(self._activity) # relative inside vertical layout
+        #params = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
+        #params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+        #relative.addView(self.listView, params) # add listview to relative with params
+        #vlayout.addView(relative, vlayout.LayoutParams.WRAP_CONTENT, vlayout.LayoutParams.WRAP_CONTENT)
+
+        vlayout.addView(self.listView)
 
         self._activity.setContentView(vlayout)
 
     def update_item(self, value):
         self.db.update_item(value)
 
-    def change_entry(self):
-        pass
-
     def create_item(self):
-        pass
+        new_item_text = str(self.entry_text.getText())
+        self.db.add_item(new_item_text, finished=False)
+        self.dbitems = self.db.fetch_items()
+        print('dbitems', self.dbitems)
+        self.adapter.values = list(self.dbitems)
+        self.adapter.notifyDataSetChanged()
+
 
 def main():
     MainApp()
