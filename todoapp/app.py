@@ -2,7 +2,7 @@ import android
 from android.graphics import Paint
 from android.view import ViewGroup
 from android.content import ContentValues
-from android.widget import CheckBox, LinearLayout, ListView, TextView
+from android.widget import Button, CheckBox, EditText, LinearLayout, RelativeLayout, ListView, TextView, LayoutParams
 from android.database.sqlite import SQLiteDatabase
 
 
@@ -158,27 +158,63 @@ class MainApp:
 
     def onCreate(self):
         print('Starting TodoApp')
-        dbitems = self.db.fetch_items()
+        hlayout = LinearLayout(self._activity)
+        hlayout.setOrientation(LinearLayout.HORIZONTAL)
 
-        if not dbitems:
-            print('populating DB')
-            self._populate_db()
-            dbitems = self.db.fetch_items()
+        self.entry_text = EditText(self._activity)
+        self.entry_text.setText('Write your new todo item')
+        hlayout.addView(self.entry_text)
 
-        print('dbitems', dbitems)
+        relative2 = RelativeLayout(self._activity) # relative inside horizontal layout
+        params2 = RelativeLayout.LayoutParams(hlayout.LayoutParams.WRAP_CONTENT, hlayout.LayoutParams.WRAP_CONTENT)
+        params2.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
 
-        adapter = ListAdapter(self._activity, dbitems, listener=self.update_item)
-        listView = ListView(self._activity)
-        listView.setAdapter(adapter)
+        button_create = Button(self._activity)
+        button_create.setText('Create')
+        button_create.setOnClickListener(OnClick(self.create_item))
+        relative2.addView(button_create, params2) # add button_create to relative layout 2 with params 2
+
+        hlayout.addView(relative2) # add relative layout 2 with create button inside a horizontal layout
 
         vlayout = LinearLayout(self._activity)
         vlayout.setOrientation(LinearLayout.VERTICAL)
-        vlayout.addView(listView)
+        vlayout.addView(hlayout)
+
+        print('Starting TodoApp List')
+        self.dbitems = self.db.fetch_items()
+
+        if not self.dbitems:
+            print('populating DB')
+            self._populate_db()
+            self.dbitems = self.db.fetch_items()
+
+        print('dbitems', self.dbitems)
+
+        self.adapter = ListAdapter(self._activity, self.dbitems, listener=self.update_item)
+        self.listView = ListView(self._activity)
+        self.listView.setAdapter(self.adapter)
+
+        #relative = RelativeLayout(self._activity) # relative inside vertical layout
+        #params = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
+        #params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+        #relative.addView(self.listView, params) # add listview to relative with params
+        #vlayout.addView(relative, vlayout.LayoutParams.WRAP_CONTENT, vlayout.LayoutParams.WRAP_CONTENT)
+
+        vlayout.addView(self.listView)
 
         self._activity.setContentView(vlayout)
 
     def update_item(self, value):
         self.db.update_item(value)
+
+    def create_item(self):
+        new_item_text = str(self.entry_text.getText())
+        self.db.add_item(new_item_text, finished=False)
+        self.dbitems = self.db.fetch_items()
+        print('dbitems', self.dbitems)
+        self.adapter.values = list(self.dbitems)
+        self.adapter.notifyDataSetChanged()
+
 
 def main():
     MainApp()
