@@ -194,12 +194,6 @@ class MainApp:
         self.listView = ListView(self._activity)
         self.listView.setAdapter(self.adapter)
 
-        #relative = RelativeLayout(self._activity) # relative inside vertical layout
-        #params = RelativeLayout.LayoutParams(relative.LayoutParams.WRAP_CONTENT, relative.LayoutParams.WRAP_CONTENT)
-        #params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
-        #relative.addView(self.listView, params) # add listview to relative with params
-        #vlayout.addView(relative, vlayout.LayoutParams.WRAP_CONTENT, vlayout.LayoutParams.WRAP_CONTENT)
-
         vlayout.addView(self.listView)
 
         self._activity.setContentView(vlayout)
@@ -211,10 +205,10 @@ class MainApp:
         new_item_text = str(self.entry_text.getText())
         self.db.add_item(new_item_text, finished=False)
         self.dbitems = self.db.fetch_items()
-        print('dbitems', self.dbitems)
         self.adapter.values = list(self.dbitems)
-        self.adapter.notifyDataSetChanged()
+        self.listView.setAdapter(self.adapter)
 
 
 def main():
     MainApp()
+    
