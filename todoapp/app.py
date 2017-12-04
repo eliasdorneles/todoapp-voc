@@ -16,6 +16,13 @@ class OnClick(implements=android.view.View[OnClickListener]):
         self.callback(*self.args, **self.kwargs)
 
 
+def _create_layout_params():
+    params = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,
+                                         RelativeLayout.LayoutParams.WRAP_CONTENT)
+    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
+    return params
+
+
 class StrikeableTextView(extends=android.widget.TextView):
     @super({context: android.content.Context})
     def __init__(self, context, striked=False):
@@ -59,11 +66,9 @@ class TodoItem:
             self.button_delete = Button(self.context)
             self.button_delete.setOnClickListener(OnClick(self.delete))
             self.button_delete.getBackground().setColorFilter(0xffff4444, PorterDuff.Mode.MULTIPLY)
-            self.button_delete.setText('Del')
+            self.button_delete.setText('X')
             relative1 = RelativeLayout(self.context) # relative inside horizontal layout
-            params1 = RelativeLayout.LayoutParams(self.layout.LayoutParams.WRAP_CONTENT, self.layout.LayoutParams.WRAP_CONTENT)
-            params1.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
-            relative1.addView(self.button_delete, params1)
+            relative1.addView(self.button_delete, _create_layout_params())
             self.layout.addView(relative1)
 
         self.text_view.setText(value['title'])
@@ -178,29 +183,6 @@ class MainApp:
 
     def onCreate(self):
         print('Starting TodoApp')
-        hlayout = LinearLayout(self._activity)
-        hlayout.setOrientation(LinearLayout.HORIZONTAL)
-
-        self.entry_text = EditText(self._activity)
-        self.entry_text.setText('Write your new todo item')
-        hlayout.addView(self.entry_text)
-
-        relative2 = RelativeLayout(self._activity) # relative inside horizontal layout
-        params2 = RelativeLayout.LayoutParams(hlayout.LayoutParams.WRAP_CONTENT, hlayout.LayoutParams.WRAP_CONTENT)
-        params2.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
-
-        button_create = Button(self._activity)
-        button_create.setText('Create')
-        button_create.setOnClickListener(OnClick(self.create_item))
-        relative2.addView(button_create, params2) # add button_create to relative layout 2 with params 2
-
-        hlayout.addView(relative2) # add relative layout 2 with create button inside a horizontal layout
-
-        vlayout = LinearLayout(self._activity)
-        vlayout.setOrientation(LinearLayout.VERTICAL)
-        vlayout.addView(hlayout)
-
-        print('Starting TodoApp List')
         self.dbitems = self.db.fetch_items()
 
         if not self.dbitems:
@@ -209,6 +191,25 @@ class MainApp:
             self.dbitems = self.db.fetch_items()
 
         print('dbitems', self.dbitems)
+
+        hlayout = LinearLayout(self._activity)
+        hlayout.setOrientation(LinearLayout.HORIZONTAL)
+
+        self.entry_text = EditText(self._activity)
+        self.entry_text.setHint('Enter a new item...')
+        hlayout.addView(self.entry_text)
+
+        button_create = Button(self._activity)
+        button_create.setText('Add')
+        button_create.setOnClickListener(OnClick(self.create_item))
+
+        rlayout = RelativeLayout(self._activity)
+        rlayout.addView(button_create, _create_layout_params())
+        hlayout.addView(rlayout)
+
+        vlayout = LinearLayout(self._activity)
+        vlayout.setOrientation(LinearLayout.VERTICAL)
+        vlayout.addView(hlayout)
 
         self.adapter = ListAdapter(self._activity, self.dbitems,
                                    listener=self._dispatch_event)
