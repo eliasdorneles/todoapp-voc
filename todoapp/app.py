@@ -100,7 +100,7 @@ class ListAdapter(extends=android.widget.BaseAdapter):
                 view: android.view.View,
                 container: android.view.ViewGroup) -> android.view.View:
         value = self.getItem(position)
-        todo = TodoItem(value, self.context, callback=self.listener, layout=view)
+        todo = TodoItem(value, self.context, callback=self.listener, layout=None)
         return todo.getView()
 
 
