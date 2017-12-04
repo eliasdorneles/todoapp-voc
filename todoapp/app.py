@@ -1,5 +1,5 @@
 import android
-from android.graphics import Paint
+from android.graphics import Paint, PorterDuff
 from android.view import ViewGroup
 from android.content import ContentValues
 from android.widget import Button, CheckBox, EditText, LinearLayout, RelativeLayout, ListView, TextView, LayoutParams
@@ -37,8 +37,9 @@ class StrikeableTextView(extends=android.widget.TextView):
 
 
 class TodoItem:
-    def __init__(self, value, context, layout=None, callback=None):
-        self.callback = callback
+    def __init__(self, value, context, layout=None, callback_update=None, callback_delete=None):
+        self.callback_update = callback_update
+        self.callback_delete = callback_delete
         self.context = context
         self.value = value
         if layout:
@@ -50,24 +51,41 @@ class TodoItem:
             self.checkbox = CheckBox(self.context)
             self.checkbox.setOnClickListener(OnClick(self.update))
             self.layout.addView(self.checkbox)
+            
+            print(value)
             self.text_view = StrikeableTextView(self.context, striked=value['finished'])
             self.text_view.setTextSize(25)
             self.layout.addView(self.text_view)
+            
+            self.button_delete = Button(self.context)
+            self.button_delete.setOnClickListener(OnClick(self.delete))
+            self.button_delete.getBackground().setColorFilter(0xffff4444, PorterDuff.Mode.MULTIPLY)
+            self.button_delete.setText('Del')
+            relative1 = RelativeLayout(self.context) # relative inside horizontal layout
+            params1 = RelativeLayout.LayoutParams(self.layout.LayoutParams.WRAP_CONTENT, self.layout.LayoutParams.WRAP_CONTENT)
+            params1.addRule(RelativeLayout.ALIGN_PARENT_RIGHT)
+            relative1.addView(self.button_delete, params1)
+            self.layout.addView(relative1)
+
         self.text_view.setText(value['title'])
         self.checkbox.setChecked(value['finished'])
 
     def update(self):
         self.value['finished'] = self.checkbox.isChecked()
         self.text_view.setStriked(self.value['finished'])
-        self.callback(self.value)
+        self.callback_update(self.value)
+
+    def delete(self):
+        self.callback_delete(self.value)
 
     def getView(self):
         return self.layout
 
 
 class ListAdapter(extends=android.widget.BaseAdapter):
-    def __init__(self, context, values, listener=None):
-        self.listener = listener
+    def __init__(self, context, values, listener_update=None, listener_delete=None):
+        self.listener_update = listener_update
+        self.listener_delete = listener_delete
         self.context = context
         self.values = list(values)
 
@@ -85,9 +103,11 @@ class ListAdapter(extends=android.widget.BaseAdapter):
                 container: android.view.ViewGroup) -> android.view.View:
         value = self.getItem(position)
         if view is None:
-            todo = TodoItem(value, self.context, callback=self.listener)
+            todo = TodoItem(value, self.context,
+                callback_update=self.listener_update, callback_delete=self.listener_delete)
         else:
-            todo = TodoItem(value, self.context, layout=view, callback=self.listener)
+            todo = TodoItem(value, self.context, layout=view,
+                callback_update=self.listener_update, callback_delete=self.listener_delete)
         return todo.getView()
 
 
@@ -145,6 +165,13 @@ class TodoDB(extends=android.database.sqlite.SQLiteOpenHelper):
         )
         db.close()
 
+    def delete_item(self, value):
+        db = self.getWritableDatabase()
+        db.execSQL(
+            "DELETE FROM todo WHERE id=%d"%(value['id'])
+        )
+        db.close()
+
 class MainApp:
     def __init__(self):
         self._activity = android.PythonActivity.setListener(self)
@@ -190,7 +217,8 @@ class MainApp:
 
         print('dbitems', self.dbitems)
 
-        self.adapter = ListAdapter(self._activity, self.dbitems, listener=self.update_item)
+        self.adapter = ListAdapter(self._activity, self.dbitems,
+            listener_update=self.update_item, listener_delete=self.delete_item)
         self.listView = ListView(self._activity)
         self.listView.setAdapter(self.adapter)
 
@@ -208,6 +236,11 @@ class MainApp:
         self.adapter.values = list(self.dbitems)
         self.listView.setAdapter(self.adapter)
 
+    def delete_item(self, value):
+        self.db.delete_item(value)
+        self.dbitems = self.db.fetch_items()
+        self.adapter.values = list(self.dbitems)
+        self.listView.setAdapter(self.adapter)
 
 def main():
     MainApp()
