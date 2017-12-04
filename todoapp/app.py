@@ -37,9 +37,8 @@ class StrikeableTextView(extends=android.widget.TextView):
 
 
 class TodoItem:
-    def __init__(self, value, context, layout=None, callback_update=None, callback_delete=None):
-        self.callback_update = callback_update
-        self.callback_delete = callback_delete
+    def __init__(self, value, context, layout=None, callback=None):
+        self.callback = callback
         self.context = context
         self.value = value
         if layout:
@@ -73,19 +72,18 @@ class TodoItem:
     def update(self):
         self.value['finished'] = self.checkbox.isChecked()
         self.text_view.setStriked(self.value['finished'])
-        self.callback_update(self.value)
+        self.callback('update', self.value)
 
     def delete(self):
-        self.callback_delete(self.value)
+        self.callback('delete', self.value)
 
     def getView(self):
         return self.layout
 
 
 class ListAdapter(extends=android.widget.BaseAdapter):
-    def __init__(self, context, values, listener_update=None, listener_delete=None):
-        self.listener_update = listener_update
-        self.listener_delete = listener_delete
+    def __init__(self, context, values, listener=None):
+        self.listener = listener
         self.context = context
         self.values = list(values)
 
@@ -102,12 +100,7 @@ class ListAdapter(extends=android.widget.BaseAdapter):
                 view: android.view.View,
                 container: android.view.ViewGroup) -> android.view.View:
         value = self.getItem(position)
-        if view is None:
-            todo = TodoItem(value, self.context,
-                callback_update=self.listener_update, callback_delete=self.listener_delete)
-        else:
-            todo = TodoItem(value, self.context, layout=view,
-                callback_update=self.listener_update, callback_delete=self.listener_delete)
+        todo = TodoItem(value, self.context, callback=self.listener, layout=view)
         return todo.getView()
 
 
@@ -218,13 +211,21 @@ class MainApp:
         print('dbitems', self.dbitems)
 
         self.adapter = ListAdapter(self._activity, self.dbitems,
-            listener_update=self.update_item, listener_delete=self.delete_item)
+                                   listener=self._dispatch_event)
         self.listView = ListView(self._activity)
         self.listView.setAdapter(self.adapter)
 
         vlayout.addView(self.listView)
 
         self._activity.setContentView(vlayout)
+
+    def _dispatch_event(self, event, value):
+        if event == 'update':
+            self.update_item(value)
+        elif event == 'delete':
+            self.delete_item(value)
+        else:
+            raise ValueError('oops: got unkwnown event %s from %s' % (event, value))
 
     def update_item(self, value):
         self.db.update_item(value)
